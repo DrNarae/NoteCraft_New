@@ -4,6 +4,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -52,10 +55,13 @@ public class Main extends JavaPlugin
 		
 		if (cmd.getName().equalsIgnoreCase("notecraft") && args.length > 0)
 		{
-			if (!sender.isOp() && OPONLYCMD)
+			if (OPONLYCMD)
 			{
-				sender.sendMessage(SYSTEM + ChatColor.RED + "서버관리자만 사용 할 수 있습니다.");
-				return false;
+				if (!sender.isOp() && !WHITELIST.containsKey(sender.getName()))
+				{
+					sender.sendMessage(SYSTEM + ChatColor.RED + "서버관리자 또는 인가된 유저만 사용 할 수 있습니다.");
+					return false;
+				}
 			}
 			
 			if (args[0].equalsIgnoreCase("play"))
@@ -290,37 +296,34 @@ public class Main extends JavaPlugin
 					try
 					{
 						int id = Integer.parseInt(args[1]);
-						if (PLAYINGLIST.containsKey(id))
+						if (LOCK.get(id))
 						{
-							if (LOCK.get(id))
-							{
-								sender.sendMessage(SYSTEM + ChatColor.RED + "지금은 할 수 없습니다. 잠시후에 다시 시도해주세요.");
-							}
-							else
-							{
-								ArrayList<NoteThread> sheetlist = PLAYINGLIST.get(id);
-								
-								for (NoteThread nt : sheetlist)
-								{
-									nt.interrupt();
-								}
-								
-								PLAYINGLIST.remove(id);
-								LOCK.remove(id);
-								
-								sender.sendMessage(SYSTEM + ChatColor.GREEN + "해당 노래를 강제중지 했습니다.");
-								
-								return true;
-							}
+							sender.sendMessage(SYSTEM + ChatColor.RED + "지금은 할 수 없습니다. 잠시후에 다시 시도해주세요.");
 						}
 						else
 						{
-							sender.sendMessage(SYSTEM + ChatColor.RED + "노래를 찾을 수 없습니다.");
+							if (stopMusic(id))
+							{
+								sender.sendMessage(SYSTEM + ChatColor.GREEN + "해당 노래를 강제중지 했습니다.");
+								return true;
+							}
+							else
+							{
+								sender.sendMessage(SYSTEM + ChatColor.RED + "노래를 찾을 수 없습니다.");
+							}
 						}
 					}
 					catch (NumberFormatException e)
 					{
 						sender.sendMessage(SYSTEM + ChatColor.RED + "ID는 숫자입니다.");
+					}
+					catch (NullPointerException e)
+					{
+						sender.sendMessage(SYSTEM + ChatColor.RED + "노래를 찾을 수 없습니다.");
+					}
+					catch (Exception e)
+					{
+						sender.sendMessage(SYSTEM + ChatColor.RED + "지금은 할 수 없습니다. 잠시후에 다시 시도해주세요.");
 					}
 				}
 				else
@@ -331,7 +334,16 @@ public class Main extends JavaPlugin
 			else if (args[0].equalsIgnoreCase("clear"))
 			{
 				clearList();
-				sender.sendMessage(SYSTEM + ChatColor.AQUA + "음악이 모두 종료되었습니다.");
+				if (PLAYINGLIST.size() > 0)
+				{
+					sender.sendMessage(SYSTEM + ChatColor.DARK_AQUA + "음악을 모두 종료시키려 했지만, 여전히 " + PLAYINGLIST.size() + "개의 음악이 재생되고 있습니다.");
+					return true;
+				}
+				else
+				{
+					sender.sendMessage(SYSTEM + ChatColor.AQUA + "음악이 모두 종료되었습니다.");
+					return true;
+				}
 			}
 			else if (args[0].equalsIgnoreCase("list"))
 			{
@@ -353,24 +365,84 @@ public class Main extends JavaPlugin
 			}
 			else
 			{
-				alertCommand();
+				alertCommand(sender);
 			}
 		}
 		else
 		{
-			alertCommand();
+			alertCommand(sender);
 		}
 		return false;
 	}
 	
-	public void alertCommand()
+	public void alertCommand(CommandSender cs)
 	{
+		// /notecraft <name> [cmd]
+		/*
+		 * (player) play <fileName1:String> [fileName2] . . . => return thread id
+		 * (common) playLocation <x:double> <y:double> <z:double> <world:World> <fileName1:String> [fileName2] . . . => return (thread id:int)
+		 * (common) playPlayer <player:Player> <fileName1:String> [fileName2] . . . => return (thread id:int)
+		 * (common) stop <thread id:int>
+		 * (common) clear => all stop playing music
+		 * (common) list => show playing music list (thread id)
+		*/
 		
+		String alert = SYSTEM + ChatColor.DARK_PURPLE + "! - 명령어 도움말 - !\n" + ChatColor.LIGHT_PURPLE + "   | " + ChatColor.DARK_RED + "<> = 필수 " + ChatColor.LIGHT_PURPLE + "| " + ChatColor.DARK_AQUA + " [] = 선택 " + ChatColor.LIGHT_PURPLE + "|\n";
+		alert += ChatColor.GOLD + " /notecraft play " + ChatColor.DARK_RED + "<fileName1> " + ChatColor.DARK_AQUA + "[fileName2] " + ChatColor.GOLD + ". . .\n";
+		alert += ChatColor.GOLD + " /notecraft playLocation " + ChatColor.DARK_RED + "<x> " + ChatColor.DARK_RED + "<y> " + ChatColor.DARK_RED + "<z> " + ChatColor.DARK_RED + "<world> " + ChatColor.DARK_RED + "<fileName1> " + ChatColor.DARK_AQUA + "[fileName2]" + ChatColor.GOLD + ". . .\n";
+		alert += ChatColor.GOLD + " /notecraft playPlayer " + ChatColor.DARK_RED + "<playerName> " + ChatColor.DARK_RED + "<fileName1> " + ChatColor.DARK_AQUA + "[fileName2] " + ChatColor.GOLD + ". . .\n";
+		alert += ChatColor.GOLD + " /notecraft stop " + ChatColor.DARK_RED + "<ID>\n";
+		alert += ChatColor.GOLD + " /notecraft clear\n";
+		alert += ChatColor.GOLD + " /notecraft list";
+		
+		cs.sendMessage(alert);
 	}
 	
 	public void clearList()
 	{
+		Set<Integer> set = PLAYINGLIST.keySet();
+		Iterator<Integer> iterator = set.iterator();
 		
+		while (iterator.hasNext())
+		{
+			int id = (int) iterator.next();
+			try
+			{
+				if (!LOCK.get(id))
+				{
+					stopMusic(id);
+				}
+			}
+			catch (Exception e) {}
+		}
+	}
+	
+	public boolean stopMusic(int id)
+	{
+		try
+		{
+			if (PLAYINGLIST.containsKey(id))
+			{
+				ArrayList<NoteThread> nts = PLAYINGLIST.get(id);
+				for (NoteThread nt : nts)
+				{
+					nt.interrupt();
+				}
+				
+				PLAYINGLIST.remove(id);
+				LOCK.remove(id);
+				
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		catch (Exception e)
+		{
+			return false;
+		}
 	}
 	
 	public int findID()
@@ -402,7 +474,10 @@ public class Main extends JavaPlugin
 	public void configFileCreate()
 	{
 		getLogger().info("노트크래프트 파일 검사중...");
+		
 		FileConfiguration config = this.getConfig();
+		
+		config.addDefault("WhiteList", "{}");
 		config.addDefault("Limit Simultaneous Play", 7);
 		config.addDefault("Limit Total Playing", 10000);
 		config.addDefault("Warning Alert", true);
@@ -418,7 +493,12 @@ public class Main extends JavaPlugin
 	public void getSetting()
 	{
 		getLogger().info("노트크래프트 설정 읽는중...");
+		
+		String white = "";
 		FileConfiguration config = this.getConfig();
+		
+		white = config.getString("WhiteList");
+		MAXIMUM = config.getInt("Limit Total Playing");
 		MAXIMUM = config.getInt("Limit Total Playing");
 		MAX_SYNC = config.getInt("Limit Simultaneous Play");
 		OPONLYCMD = config.getBoolean("OP Only Command");
@@ -427,5 +507,18 @@ public class Main extends JavaPlugin
 
 		if (MAXIMUM <= 0) MAXIMUM = 1;
 		if (MAX_SYNC <= 0) MAX_SYNC = 1;
+		if (!white.equals(""))
+		{
+			white = white.replaceAll(" ", "").replace("{", "").replace("}", "");
+			String[] users = white.split(",");
+			
+			for (String user : users)
+			{
+				if (!user.equals(""))
+				{
+					WHITELIST.put(user, true);
+				}
+			}
+		}
 	}
 }
