@@ -1,0 +1,7 @@
+main: main.Main
+name: NoteCraft
+version: 1.0
+commands:
+  notecraft:
+    
+    
