@@ -3,20 +3,31 @@ package note;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class NoteThread extends Thread
 {
 	int id;
+	int timer;
 	Location location;
 	boolean isPlayer;
-	Player player;
+	CommandSender sender;
 	Sheet sheet;
-	
-	public NoteThread(Player p, Sheet sh, int id)
+
+	public NoteThread(CommandSender cs, int timer, int id)
 	{
 		this.id = id;
-		this.player = p;
+		this.sheet = null;
+		this.timer = timer;
+		this.sender = cs;
+		this.isPlayer = true;
+	}
+	
+	public NoteThread(CommandSender cs, Sheet sh, int id)
+	{
+		this.id = id;
+		this.sender = cs;
 		this.sheet = sh;
 		this.isPlayer = true;
 	}
@@ -36,12 +47,30 @@ public class NoteThread extends Thread
 	
 	public void run()
 	{
+		if (this.sheet == null)
+		{
+			try
+			{
+				Thread.sleep(this.timer);
+			}
+			catch (InterruptedException e)
+			{
+				return;
+			}
+
+			main.Main.PLAYINGLIST.remove(this.id);
+			main.Main.LOCK.remove(this.id);
+			
+			return;
+		}
+		
 		if (this.isPlayer)
 		{
+			Player p = ((Player)(this.sender));
 			Note n = this.sheet.next();
-			while (this.player.isOnline() && n != null)
+			while (p.isOnline() && n != null)
 			{
-				this.player.playSound(this.player.getLocation(), n.getSound(), n.getVolume(), n.getPitch());
+				p.playSound(p.getLocation(), n.getSound(), n.getVolume(), n.getPitch());
 				
 //				System.out.println("---------");
 //				System.out.println(n.getSleep());
@@ -55,7 +84,7 @@ public class NoteThread extends Thread
 				}
 				catch (InterruptedException e)
 				{
-					this.player.sendMessage(ChatColor.RED + "노래가 강제중지 되었습니다.");
+					p.sendMessage(main.Main.SYSTEM + ChatColor.RED + "노래가 강제중지 되었습니다.");
 					break;
 				}
 				
@@ -63,7 +92,7 @@ public class NoteThread extends Thread
 			}
 		}
 		else
-		{ 
+		{
 			Note n = this.sheet.next();
 			while (n != null)
 			{
@@ -81,7 +110,17 @@ public class NoteThread extends Thread
 			}
 		}
 		
-		main.Main.PLAYINGLIST.remove(this.id);
-		main.Main.LOCK.remove(this.id);
+//		for (NoteThread nt : main.Main.PLAYINGLIST.get(this.id))
+//		{
+//			if (!this.equals(nt) && nt.isAlive())
+//			{
+//				System.out.println("건너뜀");
+//				return;
+//			}
+//		}
+//
+//		System.out.println("스레드 삭제됨");
+//		main.Main.PLAYINGLIST.remove(this.id);
+//		main.Main.LOCK.remove(this.id);
 	}
 }

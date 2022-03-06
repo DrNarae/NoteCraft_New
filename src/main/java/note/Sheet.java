@@ -4,13 +4,15 @@ import java.util.ArrayList;
 
 public class Sheet
 {
+	int time;
 	int index;
 	String name;
 	ArrayList<Note> context;
 	
-	public Sheet(ArrayList<Note> note, String name)
+	public Sheet(ArrayList<Note> note, String name, int time)
 	{
 		this.index = 0;
+		this.time = time+1;
 		this.name = name;
 		this.context = note;
 	}
@@ -46,5 +48,10 @@ public class Sheet
 	public String getName()
 	{
 		return this.name;
+	}
+	
+	public int getTime()
+	{
+		return this.time;
 	}
 }

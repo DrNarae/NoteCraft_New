@@ -75,6 +75,7 @@ public class Main extends JavaPlugin
 						if (error.equals(""))
 						{
 							// decoding note
+							int time = -1;
 							ArrayList<Sheet> sheets = new ArrayList<Sheet>();
 							ArrayList<NoteThread> sheetlist = new ArrayList<NoteThread>();
 							
@@ -82,9 +83,11 @@ public class Main extends JavaPlugin
 							{
 								Decoding rawNote = new Decoding(fn, sender);
 								Sheet sheet = rawNote.DecodingNote();
+								
 								if (sheet != null)
 								{
 									sheets.add(sheet);
+									time = ((sheet.getTime() >= time) ? sheet.getTime() : time);
 								}
 								else
 								{
@@ -105,10 +108,15 @@ public class Main extends JavaPlugin
 								
 								for (Sheet s : sheets)
 								{
-									NoteThread nt = new NoteThread((Player)sender, s, id);
+									NoteThread nt = new NoteThread(sender, s, id);
 									sheetlist.add(nt);
 									nt.start();
 								}
+								
+								// Timer Thread
+								NoteThread nt = new NoteThread(sender, time, id);
+								sheetlist.add(nt);
+								nt.start();
 
 								sender.sendMessage(SYSTEM + ChatColor.GREEN + "노래가 재생됩니다. ID : [" + ChatColor.LIGHT_PURPLE + id + ChatColor.GREEN + "]");
 								LOCK.put(id, false);
@@ -171,6 +179,7 @@ public class Main extends JavaPlugin
 					if (error.equals(""))
 					{
 						// decoding note
+						int time = -1;
 						ArrayList<Sheet> sheets = new ArrayList<Sheet>();
 						ArrayList<NoteThread> sheetlist = new ArrayList<NoteThread>();
 						
@@ -181,6 +190,7 @@ public class Main extends JavaPlugin
 							if (sheet != null)
 							{
 								sheets.add(sheet);
+								time = ((sheet.getTime() >= time) ? sheet.getTime() : time);
 							}
 							else
 							{
@@ -205,6 +215,11 @@ public class Main extends JavaPlugin
 								sheetlist.add(nt);
 								nt.start();
 							}
+							
+							// Timer Thread
+							NoteThread nt = new NoteThread(sender, time, id);
+							sheetlist.add(nt);
+							nt.start();
 
 							sender.sendMessage(SYSTEM + ChatColor.GREEN + "해당 위치에 노래가 재생됩니다. ID : [" + ChatColor.LIGHT_PURPLE + id + ChatColor.GREEN + "]");
 							LOCK.put(id, false);
@@ -236,6 +251,7 @@ public class Main extends JavaPlugin
 					if (error.equals(""))
 					{
 						// decoding note
+						int time = -1;
 						ArrayList<Sheet> sheets = new ArrayList<Sheet>();
 						ArrayList<NoteThread> sheetlist = new ArrayList<NoteThread>();
 						
@@ -246,6 +262,7 @@ public class Main extends JavaPlugin
 							if (sheet != null)
 							{
 								sheets.add(sheet);
+								time = ((sheet.getTime() >= time) ? sheet.getTime() : time);
 							}
 							else
 							{
@@ -270,6 +287,11 @@ public class Main extends JavaPlugin
 								sheetlist.add(nt);
 								nt.start();
 							}
+							
+							// Timer Thread
+							NoteThread nt = new NoteThread(sender, time, id);
+							sheetlist.add(nt);
+							nt.start();
 
 							sender.sendMessage(SYSTEM + ChatColor.GREEN + p.getName() + "에게 노래가 재생됩니다. ID : [" + ChatColor.LIGHT_PURPLE + id + ChatColor.GREEN + "]");
 							LOCK.put(id, false);

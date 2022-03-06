@@ -13,6 +13,7 @@ import org.bukkit.command.CommandSender;
 
 public class Decoding
 {
+	int totalTime;
 	File rawFile;
 	String rawNote;
 	CommandSender sender;
@@ -26,6 +27,7 @@ public class Decoding
 	
 	public Decoding(String f, CommandSender p)
 	{
+		this.totalTime = 0;
 		this.sender = p;
 		this.rawNote = "";
 		this.rawFile = new File("plugins/NoteCraft/Notes/" + f.replace(".txt", "") + ".txt");
@@ -345,7 +347,11 @@ public class Decoding
 				}
 				
 				Note oneNote = rn.getNote();
-				if (oneNote != null) sheet.add(oneNote);
+				if (oneNote != null)
+				{
+					this.totalTime += oneNote.getSleep();
+					sheet.add(oneNote);
+				}
 				else
 				{
 					if (!main.Main.IGNOREWRONGNOTE)
@@ -357,7 +363,7 @@ public class Decoding
 			}
 		}
 		
-		return (new Sheet(sheet, this.rawFile.getName()));
+		return (new Sheet(sheet, this.rawFile.getName(), this.totalTime));
 	}
 	
 	private String parseBracket(String br)
