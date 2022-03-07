@@ -4,7 +4,7 @@
 
 > 개발 버전 : Spigot 1.18.1
 
-> jar 파일 다운로드 : (티스토리 링크 추가예정)
+> jar 파일 다운로드 : https://link-state.tistory.com/3
 
 ***
 
